@@ -1,6 +1,6 @@
 defmodule CommitTrackerWeb.WebhookController do
   use CommitTrackerWeb, :controller
-  alias CommitTracker.Tracker.Repository
+  alias CommitTracker.Tracker.{Repository, Push}
   alias CommitTracker.Repo
   alias CommitTracker.Tracker
 
@@ -13,7 +13,10 @@ defmodule CommitTrackerWeb.WebhookController do
           "pusher" => pusher
         }
       ) do
-    IO.inspect(find_or_create_repository(repository))
+    find_or_create_repository(repository)
+    |> create_push(pushed_at)
+    |> IO.inspect()
+
     json(conn, %{ok: "success"})
   end
 
@@ -24,5 +27,12 @@ defmodule CommitTrackerWeb.WebhookController do
       |> Repo.insert(on_conflict: :nothing)
 
     Tracker.get_repository!(repo_params["id"])
+  end
+
+  defp create_push(repository, pushed_at) do
+    {:ok, pushed_at_date_time, 0} = DateTime.from_iso8601(pushed_at)
+
+    Ecto.build_assoc(repository, :pushes, %{pushed_at: pushed_at_date_time})
+    |> Repo.insert!()
   end
 end

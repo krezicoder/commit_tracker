@@ -1,11 +1,14 @@
 defmodule CommitTracker.Tracker.Repository do
   use Ecto.Schema
   import Ecto.Changeset
+  alias CommitTracker.Tracker.Push
 
   schema "repositories" do
     field :name, :string
 
     timestamps()
+
+    has_many :pushes, Push
   end
 
   @doc false
