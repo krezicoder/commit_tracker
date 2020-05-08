@@ -1,7 +1,7 @@
 defmodule CommitTracker.Tracker.Commit do
   use Ecto.Schema
   import Ecto.Changeset
-  alias CommitTracker.Tracker.{Author, Repository, Push}
+  alias CommitTracker.Tracker.{Author, Repository, Push, Ticket}
 
   schema "commits" do
     field :date, :utc_datetime
@@ -13,6 +13,7 @@ defmodule CommitTracker.Tracker.Commit do
     belongs_to :author, Author
     belongs_to :push, Push
     belongs_to :repository, Repository
+    has_many :tickets, Ticket
   end
 
   @doc false

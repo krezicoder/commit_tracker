@@ -57,7 +57,6 @@ defmodule CommitTrackerWeb.WebhookController do
       Ecto.build_assoc(author, :pushes, push)
       |> Repo.insert!()
 
-    IO.inspect(push_assoc)
     push_assoc
   end
 
@@ -65,7 +64,8 @@ defmodule CommitTrackerWeb.WebhookController do
     Enum.map(commits, fn commit ->
       IO.inspect(commit)
       author = find_or_create_author(commit["author"])
-      [commit_type, _, _] = String.split(commit["message"], ":")
+      [commit_type, _, tickets] = String.split(commit["message"], ":")
+      refined_tickets = get_tickets_list(tickets) |> IO.inspect()
       {:ok, commit_date, 0} = DateTime.from_iso8601(commit["date"])
 
       commit_params = %{
@@ -78,8 +78,23 @@ defmodule CommitTrackerWeb.WebhookController do
         date: commit_date
       }
 
-      %Commit{} |> Commit.changeset(commit_params) |> Repo.insert!()
-      IO.inspect(commit)
+      commit_created = %Commit{} |> Commit.changeset(commit_params) |> Repo.insert!()
+
+      Enum.map(refined_tickets, fn ticket ->
+        Ecto.build_assoc(commit_created, :tickets, %{
+          ticket_id: ticket,
+          type: commit_type
+        })
+        |> Repo.insert!()
+      end)
+    end)
+  end
+
+  defp get_tickets_list(tickets) do
+    tck_list = String.split(tickets, ",")
+
+    Enum.map(tck_list, fn item ->
+      String.trim(item)
     end)
   end
 end

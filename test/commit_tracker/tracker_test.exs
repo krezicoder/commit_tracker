@@ -246,4 +246,65 @@ defmodule CommitTracker.TrackerTest do
       assert %Ecto.Changeset{} = Tracker.change_commit(commit)
     end
   end
+
+  describe "tickets" do
+    alias CommitTracker.Tracker.Ticket
+
+    @valid_attrs %{ticket_id: "some ticket_id", type: "some type"}
+    @update_attrs %{ticket_id: "some updated ticket_id", type: "some updated type"}
+    @invalid_attrs %{ticket_id: nil, type: nil}
+
+    def ticket_fixture(attrs \\ %{}) do
+      {:ok, ticket} =
+        attrs
+        |> Enum.into(@valid_attrs)
+        |> Tracker.create_ticket()
+
+      ticket
+    end
+
+    test "list_tickets/0 returns all tickets" do
+      ticket = ticket_fixture()
+      assert Tracker.list_tickets() == [ticket]
+    end
+
+    test "get_ticket!/1 returns the ticket with given id" do
+      ticket = ticket_fixture()
+      assert Tracker.get_ticket!(ticket.id) == ticket
+    end
+
+    test "create_ticket/1 with valid data creates a ticket" do
+      assert {:ok, %Ticket{} = ticket} = Tracker.create_ticket(@valid_attrs)
+      assert ticket.ticket_id == "some ticket_id"
+      assert ticket.type == "some type"
+    end
+
+    test "create_ticket/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Tracker.create_ticket(@invalid_attrs)
+    end
+
+    test "update_ticket/2 with valid data updates the ticket" do
+      ticket = ticket_fixture()
+      assert {:ok, %Ticket{} = ticket} = Tracker.update_ticket(ticket, @update_attrs)
+      assert ticket.ticket_id == "some updated ticket_id"
+      assert ticket.type == "some updated type"
+    end
+
+    test "update_ticket/2 with invalid data returns error changeset" do
+      ticket = ticket_fixture()
+      assert {:error, %Ecto.Changeset{}} = Tracker.update_ticket(ticket, @invalid_attrs)
+      assert ticket == Tracker.get_ticket!(ticket.id)
+    end
+
+    test "delete_ticket/1 deletes the ticket" do
+      ticket = ticket_fixture()
+      assert {:ok, %Ticket{}} = Tracker.delete_ticket(ticket)
+      assert_raise Ecto.NoResultsError, fn -> Tracker.get_ticket!(ticket.id) end
+    end
+
+    test "change_ticket/1 returns a ticket changeset" do
+      ticket = ticket_fixture()
+      assert %Ecto.Changeset{} = Tracker.change_ticket(ticket)
+    end
+  end
 end
