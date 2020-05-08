@@ -181,4 +181,69 @@ defmodule CommitTracker.TrackerTest do
       assert %Ecto.Changeset{} = Tracker.change_author(author)
     end
   end
+
+  describe "commits" do
+    alias CommitTracker.Tracker.Commit
+
+    @valid_attrs %{date: "2010-04-17T14:00:00Z", message: "some message", sha: "some sha", type: "some type"}
+    @update_attrs %{date: "2011-05-18T15:01:01Z", message: "some updated message", sha: "some updated sha", type: "some updated type"}
+    @invalid_attrs %{date: nil, message: nil, sha: nil, type: nil}
+
+    def commit_fixture(attrs \\ %{}) do
+      {:ok, commit} =
+        attrs
+        |> Enum.into(@valid_attrs)
+        |> Tracker.create_commit()
+
+      commit
+    end
+
+    test "list_commits/0 returns all commits" do
+      commit = commit_fixture()
+      assert Tracker.list_commits() == [commit]
+    end
+
+    test "get_commit!/1 returns the commit with given id" do
+      commit = commit_fixture()
+      assert Tracker.get_commit!(commit.id) == commit
+    end
+
+    test "create_commit/1 with valid data creates a commit" do
+      assert {:ok, %Commit{} = commit} = Tracker.create_commit(@valid_attrs)
+      assert commit.date == DateTime.from_naive!(~N[2010-04-17T14:00:00Z], "Etc/UTC")
+      assert commit.message == "some message"
+      assert commit.sha == "some sha"
+      assert commit.type == "some type"
+    end
+
+    test "create_commit/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Tracker.create_commit(@invalid_attrs)
+    end
+
+    test "update_commit/2 with valid data updates the commit" do
+      commit = commit_fixture()
+      assert {:ok, %Commit{} = commit} = Tracker.update_commit(commit, @update_attrs)
+      assert commit.date == DateTime.from_naive!(~N[2011-05-18T15:01:01Z], "Etc/UTC")
+      assert commit.message == "some updated message"
+      assert commit.sha == "some updated sha"
+      assert commit.type == "some updated type"
+    end
+
+    test "update_commit/2 with invalid data returns error changeset" do
+      commit = commit_fixture()
+      assert {:error, %Ecto.Changeset{}} = Tracker.update_commit(commit, @invalid_attrs)
+      assert commit == Tracker.get_commit!(commit.id)
+    end
+
+    test "delete_commit/1 deletes the commit" do
+      commit = commit_fixture()
+      assert {:ok, %Commit{}} = Tracker.delete_commit(commit)
+      assert_raise Ecto.NoResultsError, fn -> Tracker.get_commit!(commit.id) end
+    end
+
+    test "change_commit/1 returns a commit changeset" do
+      commit = commit_fixture()
+      assert %Ecto.Changeset{} = Tracker.change_commit(commit)
+    end
+  end
 end

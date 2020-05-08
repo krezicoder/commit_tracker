@@ -1,7 +1,7 @@
 defmodule CommitTracker.Tracker.Author do
   use Ecto.Schema
   import Ecto.Changeset
-  alias CommitTracker.Tracker.Push
+  alias CommitTracker.Tracker.{Push, Commit}
 
   schema "authors" do
     field :email, :string
@@ -9,6 +9,7 @@ defmodule CommitTracker.Tracker.Author do
 
     timestamps()
     has_many :pushes, Push
+    has_many :commits, Commit
   end
 
   @doc false

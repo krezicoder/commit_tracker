@@ -1,6 +1,6 @@
 defmodule CommitTrackerWeb.WebhookController do
   use CommitTrackerWeb, :controller
-  alias CommitTracker.Tracker.{Repository, Push, Author}
+  alias CommitTracker.Tracker.{Repository, Push, Author, Commit}
   alias CommitTracker.Repo
   alias CommitTracker.Tracker
 
@@ -13,12 +13,12 @@ defmodule CommitTrackerWeb.WebhookController do
           "pusher" => pusher
         }
       ) do
-    author = find_or_create_author(pusher)
+    push_author = find_or_create_author(pusher)
 
-    find_or_create_repository(repository)
-    |> create_push(pushed_at)
-    |> create_push_author(author)
-    |> IO.inspect()
+    push =
+      find_or_create_repository(repository)
+      |> create_push_with_push_author_repository(pushed_at, push_author)
+      |> create_commits_with_push_repo_author(repository, commits)
 
     json(conn, %{ok: "success"})
   end
@@ -41,17 +41,45 @@ defmodule CommitTrackerWeb.WebhookController do
     Tracker.get_author!(author_params["id"])
   end
 
-  defp create_push(repository, pushed_at) do
+  defp create_push_with_push_author_repository(repository, pushed_at, author) do
     {:ok, pushed_at_date_time, 0} = DateTime.from_iso8601(pushed_at)
 
-    Ecto.build_assoc(repository, :pushes, %{pushed_at: pushed_at_date_time})
-    |> Repo.insert!()
+    push =
+      Ecto.build_assoc(author, :pushes, %{
+        pushed_at: pushed_at_date_time,
+        repository_id: repository.id
+      })
+      |> Repo.insert!()
   end
 
   defp create_push_author(push, author) do
-    push_assoc = Ecto.build_assoc(author, :pushes, push)
+    {:ok, push_assoc} =
+      Ecto.build_assoc(author, :pushes, push)
+      |> Repo.insert!()
 
     IO.inspect(push_assoc)
-    |> Repo.insert!()
+    push_assoc
+  end
+
+  defp create_commits_with_push_repo_author(push, repository, commits) do
+    Enum.map(commits, fn commit ->
+      IO.inspect(commit)
+      author = find_or_create_author(commit["author"])
+      [commit_type, _, _] = String.split(commit["message"], ":")
+      {:ok, commit_date, 0} = DateTime.from_iso8601(commit["date"])
+
+      commit_params = %{
+        repository_id: repository["id"],
+        author_id: author.id,
+        push_id: push.id,
+        message: commit["message"],
+        type: commit_type,
+        sha: commit["sha"],
+        date: commit_date
+      }
+
+      %Commit{} |> Commit.changeset(commit_params) |> Repo.insert!()
+      IO.inspect(commit)
+    end)
   end
 end
