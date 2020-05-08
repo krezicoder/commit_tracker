@@ -1,13 +1,14 @@
 defmodule CommitTracker.Tracker.Push do
   use Ecto.Schema
   import Ecto.Changeset
-  alias CommitTracker.Tracker.Repository
+  alias CommitTracker.Tracker.{Repository, Author}
 
   schema "pushes" do
     field :pushed_at, :utc_datetime
 
     timestamps()
     belongs_to :repository, Repository
+    belongs_to :author, Author
   end
 
   @doc false

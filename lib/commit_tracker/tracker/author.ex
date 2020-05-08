@@ -1,19 +1,21 @@
 defmodule CommitTracker.Tracker.Author do
   use Ecto.Schema
   import Ecto.Changeset
+  alias CommitTracker.Tracker.Push
 
   schema "authors" do
     field :email, :string
     field :name, :string
 
     timestamps()
+    has_many :pushes, Push
   end
 
   @doc false
   def changeset(author, attrs) do
     author
-    |> cast(attrs, [:name, :email])
-    |> validate_required([:name, :email])
+    |> cast(attrs, [:id, :name, :email])
+    |> validate_required([:id, :name, :email])
     |> unique_constraint(:email)
   end
 end
