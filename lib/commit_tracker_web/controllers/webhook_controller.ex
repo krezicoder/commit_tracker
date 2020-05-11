@@ -4,6 +4,7 @@ defmodule CommitTrackerWeb.WebhookController do
   alias CommitTracker.Repo
   alias CommitTracker.Tracker
 
+  # Push Actions
   def actions(
         conn,
         %{
@@ -20,7 +21,16 @@ defmodule CommitTrackerWeb.WebhookController do
       |> create_push_with_push_author_repository(pushed_at, push_author)
       |> create_commits_with_push_repo_author(repository, commits)
 
+      # TODO: Need to send the request to the ticket tracking system
     json(conn, %{ok: "success"})
+  end
+
+
+  def actions(conn, %{"action" => action, "released_at" => released_at, "release" => release, "repository" => repository }) do 
+    # Release action
+    IO.inspect("Received Request")
+    json(conn, %{ok: "success"})
+
   end
 
   defp find_or_create_repository(repo_params) do

@@ -307,4 +307,67 @@ defmodule CommitTracker.TrackerTest do
       assert %Ecto.Changeset{} = Tracker.change_ticket(ticket)
     end
   end
+
+  describe "releases" do
+    alias CommitTracker.Tracker.Release
+
+    @valid_attrs %{released_at: "2010-04-17T14:00:00Z", status: "some status", tag_name: "some tag_name"}
+    @update_attrs %{released_at: "2011-05-18T15:01:01Z", status: "some updated status", tag_name: "some updated tag_name"}
+    @invalid_attrs %{released_at: nil, status: nil, tag_name: nil}
+
+    def release_fixture(attrs \\ %{}) do
+      {:ok, release} =
+        attrs
+        |> Enum.into(@valid_attrs)
+        |> Tracker.create_release()
+
+      release
+    end
+
+    test "list_releases/0 returns all releases" do
+      release = release_fixture()
+      assert Tracker.list_releases() == [release]
+    end
+
+    test "get_release!/1 returns the release with given id" do
+      release = release_fixture()
+      assert Tracker.get_release!(release.id) == release
+    end
+
+    test "create_release/1 with valid data creates a release" do
+      assert {:ok, %Release{} = release} = Tracker.create_release(@valid_attrs)
+      assert release.released_at == DateTime.from_naive!(~N[2010-04-17T14:00:00Z], "Etc/UTC")
+      assert release.status == "some status"
+      assert release.tag_name == "some tag_name"
+    end
+
+    test "create_release/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Tracker.create_release(@invalid_attrs)
+    end
+
+    test "update_release/2 with valid data updates the release" do
+      release = release_fixture()
+      assert {:ok, %Release{} = release} = Tracker.update_release(release, @update_attrs)
+      assert release.released_at == DateTime.from_naive!(~N[2011-05-18T15:01:01Z], "Etc/UTC")
+      assert release.status == "some updated status"
+      assert release.tag_name == "some updated tag_name"
+    end
+
+    test "update_release/2 with invalid data returns error changeset" do
+      release = release_fixture()
+      assert {:error, %Ecto.Changeset{}} = Tracker.update_release(release, @invalid_attrs)
+      assert release == Tracker.get_release!(release.id)
+    end
+
+    test "delete_release/1 deletes the release" do
+      release = release_fixture()
+      assert {:ok, %Release{}} = Tracker.delete_release(release)
+      assert_raise Ecto.NoResultsError, fn -> Tracker.get_release!(release.id) end
+    end
+
+    test "change_release/1 returns a release changeset" do
+      release = release_fixture()
+      assert %Ecto.Changeset{} = Tracker.change_release(release)
+    end
+  end
 end
