@@ -370,4 +370,83 @@ defmodule CommitTracker.TrackerTest do
       assert %Ecto.Changeset{} = Tracker.change_release(release)
     end
   end
+
+  describe "pull_requests" do
+    alias CommitTracker.Tracker.PullRequest
+
+    @valid_attrs %{action: "some action", body: "some body", closed_at: "2010-04-17T14:00:00Z", created_at: "2010-04-17T14:00:00Z", head_sha: "some head_sha", merge_commit_sha: "some merge_commit_sha", number: 42, request_number: 42, state: "some state", title: "some title", updated_at: "2010-04-17T14:00:00Z"}
+    @update_attrs %{action: "some updated action", body: "some updated body", closed_at: "2011-05-18T15:01:01Z", created_at: "2011-05-18T15:01:01Z", head_sha: "some updated head_sha", merge_commit_sha: "some updated merge_commit_sha", number: 43, request_number: 43, state: "some updated state", title: "some updated title", updated_at: "2011-05-18T15:01:01Z"}
+    @invalid_attrs %{action: nil, body: nil, closed_at: nil, created_at: nil, head_sha: nil, merge_commit_sha: nil, number: nil, request_number: nil, state: nil, title: nil, updated_at: nil}
+
+    def pull_request_fixture(attrs \\ %{}) do
+      {:ok, pull_request} =
+        attrs
+        |> Enum.into(@valid_attrs)
+        |> Tracker.create_pull_request()
+
+      pull_request
+    end
+
+    test "list_pull_requests/0 returns all pull_requests" do
+      pull_request = pull_request_fixture()
+      assert Tracker.list_pull_requests() == [pull_request]
+    end
+
+    test "get_pull_request!/1 returns the pull_request with given id" do
+      pull_request = pull_request_fixture()
+      assert Tracker.get_pull_request!(pull_request.id) == pull_request
+    end
+
+    test "create_pull_request/1 with valid data creates a pull_request" do
+      assert {:ok, %PullRequest{} = pull_request} = Tracker.create_pull_request(@valid_attrs)
+      assert pull_request.action == "some action"
+      assert pull_request.body == "some body"
+      assert pull_request.closed_at == DateTime.from_naive!(~N[2010-04-17T14:00:00Z], "Etc/UTC")
+      assert pull_request.created_at == DateTime.from_naive!(~N[2010-04-17T14:00:00Z], "Etc/UTC")
+      assert pull_request.head_sha == "some head_sha"
+      assert pull_request.merge_commit_sha == "some merge_commit_sha"
+      assert pull_request.number == 42
+      assert pull_request.request_number == 42
+      assert pull_request.state == "some state"
+      assert pull_request.title == "some title"
+      assert pull_request.updated_at == DateTime.from_naive!(~N[2010-04-17T14:00:00Z], "Etc/UTC")
+    end
+
+    test "create_pull_request/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Tracker.create_pull_request(@invalid_attrs)
+    end
+
+    test "update_pull_request/2 with valid data updates the pull_request" do
+      pull_request = pull_request_fixture()
+      assert {:ok, %PullRequest{} = pull_request} = Tracker.update_pull_request(pull_request, @update_attrs)
+      assert pull_request.action == "some updated action"
+      assert pull_request.body == "some updated body"
+      assert pull_request.closed_at == DateTime.from_naive!(~N[2011-05-18T15:01:01Z], "Etc/UTC")
+      assert pull_request.created_at == DateTime.from_naive!(~N[2011-05-18T15:01:01Z], "Etc/UTC")
+      assert pull_request.head_sha == "some updated head_sha"
+      assert pull_request.merge_commit_sha == "some updated merge_commit_sha"
+      assert pull_request.number == 43
+      assert pull_request.request_number == 43
+      assert pull_request.state == "some updated state"
+      assert pull_request.title == "some updated title"
+      assert pull_request.updated_at == DateTime.from_naive!(~N[2011-05-18T15:01:01Z], "Etc/UTC")
+    end
+
+    test "update_pull_request/2 with invalid data returns error changeset" do
+      pull_request = pull_request_fixture()
+      assert {:error, %Ecto.Changeset{}} = Tracker.update_pull_request(pull_request, @invalid_attrs)
+      assert pull_request == Tracker.get_pull_request!(pull_request.id)
+    end
+
+    test "delete_pull_request/1 deletes the pull_request" do
+      pull_request = pull_request_fixture()
+      assert {:ok, %PullRequest{}} = Tracker.delete_pull_request(pull_request)
+      assert_raise Ecto.NoResultsError, fn -> Tracker.get_pull_request!(pull_request.id) end
+    end
+
+    test "change_pull_request/1 returns a pull_request changeset" do
+      pull_request = pull_request_fixture()
+      assert %Ecto.Changeset{} = Tracker.change_pull_request(pull_request)
+    end
+  end
 end
