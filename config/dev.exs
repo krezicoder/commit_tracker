@@ -2,8 +2,8 @@ use Mix.Config
 
 # Configure your database
 config :commit_tracker, CommitTracker.Repo,
-  username: "drt",
-  password: "ajet.bitshyd",
+  username: "postgres",
+  password: "postgres",
   database: "commit_tracker_dev",
   hostname: "localhost",
   show_sensitive_data_on_connection_error: true,
