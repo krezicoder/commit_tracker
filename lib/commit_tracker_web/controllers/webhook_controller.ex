@@ -18,10 +18,12 @@ defmodule CommitTrackerWeb.WebhookController do
     push_author = find_or_create_author(pusher)
 
     repo = find_or_create_repository(repository)
+    commit_status = "ready for release"
 
     repo
     |> create_push_with_push_author_repository(pushed_at, push_author)
-    |> create_commits_with_push_repo_author(repo, commits)
+    |> create_commits_with_push_repo_author(repo, commits, commit_status)
+    |> post_commits_to_ticket_tracker()
 
     # TODO: Need to send the request to the ticket tracking system
     json(conn, %{ok: "success"})
@@ -34,37 +36,38 @@ defmodule CommitTrackerWeb.WebhookController do
         "release" => release,
         "repository" => repository
       }) do
-    IO.inspect("Release Request")
     # Release action
     repo = find_or_create_repository(repository)
     created_release = find_or_create_release_with_author(release, released_at, repo, action)
+    commit_status = "released"
 
-    create_or_find_commits(repo, release["commits"])
+    create_or_find_commits(repo, release["commits"], commit_status)
     |> associate_commits_to_release(created_release)
+    |> post_commits_to_ticket_tracker()
 
     # TODO: Need to send request to ticket tracking system
     json(conn, %{ok: "success"})
   end
 
   # Pullrequest action payload pattern matching
-
   def actions(conn, %{
         "action" => action,
         "number" => number,
         "pull_request" => pull_request,
         "repository" => repository
       }) do
-    IO.inspect("Matched Pull Request")
-
     repo = find_or_create_repository(repository)
 
     created_pr =
       repo
       |> find_or_create_pull_request_with_author(pull_request, action, number)
 
+    commit_status = "ready for release"
+
     repo
-    |> create_or_find_commits(pull_request["commits"])
+    |> create_or_find_commits(pull_request["commits"], commit_status)
     |> associate_commits_to_pull_request(created_pr)
+    |> post_commits_to_ticket_tracker()
 
     # TODO: Need to send request to ticket tracking system
     json(conn, %{ok: "success"})
@@ -74,12 +77,43 @@ defmodule CommitTrackerWeb.WebhookController do
   # All Private Methods are below
   # Accosicate commits to releases if they are not already
   #################################################################################
+  defp post_commits_to_ticket_tracker(commits) do
+    IO.inspect(commits)
+
+    Enum.map(commits, fn commit ->
+      loaded_commit = commit |> Repo.preload([:tickets])
+
+      ticket_ids =
+        Enum.map(loaded_commit.tickets, fn ticket ->
+          %{id: ticket.ticket_id}
+        end)
+
+      IO.inspect(ticket_ids)
+      query_text = "state " <> "\#" <> "{" <> "#{commit.status}" <> "}"
+
+      data = %{
+        query: query_text,
+        issues: ticket_ids,
+        comment: "See SHA ##{commit.sha}"
+      }
+
+      url = "https://webhook.site/8e5e1e1b-0432-4f81-affe-44895ceb1eb1"
+      encoded_data = data |> Jason.encode!()
+      HTTPoison.start()
+      response = HTTPoison.post(url, encoded_data)
+
+      IO.inspect(response)
+    end)
+  end
+
   defp associate_commits_to_pull_request(commits, pr) do
     pr
     |> Repo.preload([:commits])
     |> Ecto.Changeset.change()
     |> Ecto.Changeset.put_assoc(:commits, commits)
     |> Repo.update!()
+
+    commits
   end
 
   defp find_or_create_pull_request_with_author(repo, pull_request, action, number) do
@@ -118,6 +152,8 @@ defmodule CommitTrackerWeb.WebhookController do
     |> Ecto.Changeset.change()
     |> Ecto.Changeset.put_assoc(:commits, commits)
     |> Repo.update!()
+
+    commits
   end
 
   defp find_or_create_release_with_author(release_params, released_at, repo, action) do
@@ -168,15 +204,15 @@ defmodule CommitTrackerWeb.WebhookController do
     |> Repo.insert!()
   end
 
-  defp create_commits_with_push_repo_author(push, repository, commits) do
-    commits_created = create_or_find_commits(repository, commits)
+  defp create_commits_with_push_repo_author(push, repository, commits, status) do
+    commits_created = create_or_find_commits(repository, commits, status)
 
     Enum.map(commits_created, fn commit ->
       Ecto.Changeset.change(commit, %{push_id: push.id}) |> Repo.update!()
     end)
   end
 
-  defp create_or_find_commits(repository, commits) do
+  defp create_or_find_commits(repository, commits, status) do
     Enum.map(commits, fn commit ->
       author = find_or_create_author(commit["author"])
       commit_created = Tracker.get_commit_by_sha(commit["sha"])
@@ -194,18 +230,23 @@ defmodule CommitTrackerWeb.WebhookController do
           message: commit["message"],
           type: commit_type,
           sha: commit["sha"],
-          date: commit_date
+          date: commit_date,
+          status: status
         }
 
         created_commit = %Commit{} |> Commit.changeset(commit_params) |> Repo.insert!()
 
         Enum.map(refined_tickets, fn ticket ->
           Ecto.build_assoc(created_commit, :tickets, %{
-            ticket_id: ticket,
+            ticket_id: String.replace(ticket, "#", ""),
             type: commit_type
           })
           |> Repo.insert!()
         end)
+      else
+        Tracker.get_commit_by_sha(commit["sha"])
+        |> Ecto.Changeset.change(%{status: status})
+        |> Repo.update!()
       end
 
       Tracker.get_commit_by_sha(commit["sha"])

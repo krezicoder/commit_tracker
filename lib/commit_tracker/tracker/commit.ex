@@ -8,6 +8,7 @@ defmodule CommitTracker.Tracker.Commit do
     field :message, :string
     field :sha, :string
     field :type, :string
+    field :status, :string
 
     timestamps()
     belongs_to :author, Author
@@ -27,7 +28,7 @@ defmodule CommitTracker.Tracker.Commit do
   @doc false
   def changeset(commit, attrs) do
     commit
-    |> cast(attrs, [:sha, :message, :date, :type, :repository_id, :push_id, :author_id])
+    |> cast(attrs, [:sha, :message, :date, :type, :repository_id, :push_id, :author_id, :status])
     |> validate_required([:sha, :message, :date, :type])
     |> unique_constraint(:sha)
   end
